@@ -1,6 +1,9 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Component, OnInit } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
 import { environment } from '../environments/environment';
+
+declare var google: any;
 
 @Component({
   selector: 'app-root',
@@ -16,6 +19,10 @@ export class AppComponent implements OnInit {
   currentPhotoIndex = -1;
 
   apiKey = environment.apiKey;
+  clientId = environment.clientId;
+  accessToken = ''; // Ce jeton doit être obtenu via une connexion utilisateur (Google Auth)
+
+  driveId = '14hvtSKfW4mzg9-BbCySafLJNAFUUeZc2';
 
   readonly PhotoPathPrefix = 'assets/tempPics/';
 
@@ -31,8 +38,9 @@ export class AppComponent implements OnInit {
   constructor(private httpClient: HttpClient) { }
 
   ngOnInit(): void {
-    //Fonction pour aller chercher les photos
-    this.getPhotos();
+    // On charge le script d'authentification Google
+    this.loadGoogleScript();
+
     //Affiche la première photo
     this.displayNextPhoto();
 
@@ -40,8 +48,36 @@ export class AppComponent implements OnInit {
     this.startTimer();
   }
 
-  getPhotos(): void {
-    //this.httpClient.get("", { key: "value" })
+  loadGoogleScript(): void {
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.onload = () => {
+      const client = google.accounts.oauth2.initTokenClient({
+        client_id: this.clientId,
+        scope: 'https://www.googleapis.com/auth/drive.readonly',
+        callback: (response: any) => {
+          if (response.access_token) {
+            this.accessToken = response.access_token;
+            this.getPhotos();
+          }
+        },
+      });
+      // Note: Cela ouvrira une popup. Les navigateurs peuvent bloquer ceci s'il n'y a pas d'interaction utilisateur (clic).
+      client.requestAccessToken();
+    };
+    document.body.appendChild(script);
+  }
+
+  async getPhotos(): Promise<void> {
+    // On prépare l'en-tête Authorization avec le jeton d'accès
+    const headers = new HttpHeaders({
+      'Authorization': `Bearer ${this.accessToken}`
+    });
+
+    var result = await firstValueFrom(this.httpClient.get("https://www.googleapis.com/drive/v3/drives/14hvtSKfW4mzg9-BbCySafLJNAFUUeZc2?fields=user,storageQuota", { headers: headers }));
+    console.log(result);
   }
 
   displayNextPhoto(): void {
