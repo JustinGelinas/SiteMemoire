@@ -1,4 +1,6 @@
+import { HttpClient } from '@angular/common/http';
 import { Component, OnInit } from '@angular/core';
+import { environment } from '../environments/environment';
 
 @Component({
   selector: 'app-root',
@@ -13,6 +15,8 @@ export class AppComponent implements OnInit {
 
   currentPhotoIndex = -1;
 
+  apiKey = environment.apiKey;
+
   readonly PhotoPathPrefix = 'assets/tempPics/';
 
   listOfPhotos =
@@ -24,14 +28,20 @@ export class AppComponent implements OnInit {
 
   currentPhotoPath = '';
 
+  constructor(private httpClient: HttpClient) { }
+
   ngOnInit(): void {
     //Fonction pour aller chercher les photos
-
+    this.getPhotos();
     //Affiche la première photo
     this.displayNextPhoto();
 
     //Démarre le timer
     this.startTimer();
+  }
+
+  getPhotos(): void {
+    //this.httpClient.get("", { key: "value" })
   }
 
   displayNextPhoto(): void {
